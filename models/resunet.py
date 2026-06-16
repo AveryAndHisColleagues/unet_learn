@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 
 from models.resnet import ResNet18
+from models.resnet import BasicBlock
 
 
 class UpBlock(nn.Module):
@@ -14,32 +15,48 @@ class UpBlock(nn.Module):
             align_corners=True
         )
 
-        self.conv = nn.Sequential(
+        # self.conv = nn.Sequential(
+        #     nn.Conv2d(
+        #         in_channels + skip_channels,
+        #         out_channels,
+        #         kernel_size=3,
+        #         padding=1,
+        #         bias=False
+        #     ),
+        #     nn.BatchNorm2d(out_channels),
+        #     nn.ReLU(inplace=True),
+
+        #     nn.Conv2d(
+        #         out_channels,
+        #         out_channels,
+        #         kernel_size=3,
+        #         padding=1,
+        #         bias=False
+        #     ),
+        #     nn.BatchNorm2d(out_channels),
+        #     nn.ReLU(inplace=True),
+        # )
+        self.reduce = nn.Sequential(
             nn.Conv2d(
                 in_channels + skip_channels,
                 out_channels,
-                kernel_size=3,
-                padding=1,
+                kernel_size=1,
                 bias=False
             ),
             nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True),
-
-            nn.Conv2d(
-                out_channels,
-                out_channels,
-                kernel_size=3,
-                padding=1,
-                bias=False
-            ),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True),
+            nn.ReLU(inplace=True)
+        )
+        self.res_block = BasicBlock(
+            out_channels,
+            out_channels,
+            stride=1
         )
 
     def forward(self, x, skip):
         x = self.up(x)
         x = torch.cat([x, skip], dim=1)
-        x = self.conv(x)
+        x = self.reduce(x)
+        x = self.res_block(x)
         return x
 
 
