@@ -40,3 +40,8 @@ Best Val IoU:
 - ResUNet + BCE+Tversky achieves the best validation IoU.
 - ResUNet + BCE+Dice performs poorly, showing that this architecture is loss-sensitive.
 - MiniUNet + BCE+Dice remains a strong baseline.
+
+## Chatters
+This juvenile project aims to help me understand the process of image segmentation. I didn't expect this project would go on for too long. But working on this ablation experiment gives me a glimpse of how research and innovation should be conducted and structured(though what I'm doing rn is far from any of them). I need more time to go over this project. Hope that this is the beginning of something. 
+
+Just learned Messi's hat-trick against Algeria. Vamos Argentina carajo. I'm gonna wear my Argentina jersey when playing football later.
