@@ -2,6 +2,29 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+class SEBlock(nn.Module):
+    def __init__(self, channels, reduction=16):
+        super(SEBlock, self).__init__()
+
+        self.avgpool = nn.AdaptiveAvgPool2d(1)
+
+        self.fc = nn.Sequential(
+            nn.Linear(channels, channels // reduction),
+            nn.ReLU(inplace=True),
+            nn.Linear(channels // reduction, channels),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        b, c, h, w = x.shape
+
+        y = self.avgpool(x)      # (B,C,1,1)
+        y = y.view(b, c)         # (B,C)
+        y = self.fc(y)           # (B,C)
+        y = y.view(b, c, 1, 1)   # (B,C,1,1)
+
+        return x * y
+
 class BasicBlock(nn.Module):
     expansion = 1
 
@@ -26,6 +49,8 @@ class BasicBlock(nn.Module):
         )
         self.bn2 = nn.BatchNorm2d(out_channels)
 
+        self.se = SEBlock(out_channels)
+
         self.relu = nn.ReLU(inplace=True)
 
         #shortcut分支，负责把identity的shape对其到out
@@ -45,7 +70,7 @@ class BasicBlock(nn.Module):
 
         out = self.conv2(out)
         out = self.bn2(out)
-
+        out = self.se(out)
         if self.downsample is not None:
             identity = self.downsample(x)
 
@@ -155,14 +180,27 @@ class ResNet18(nn.Module):
 
         return x
 
+# if __name__ == "__main__":
+#     x = torch.randn(1, 3, 224, 224)
+#     model = ResNet18(num_classes=2)
+#     block = BasicBlock(64, 64)
+#     x1, x2, x3, x4 = model.forward_features(x)
+
+#     print("x1:", x1.shape)
+#     print("x2:", x2.shape)
+#     print("x3:", x3.shape)
+#     print("x4:", x4.shape)
+
 if __name__ == "__main__":
-    x = torch.randn(1, 3, 224, 224)
+    x = torch.randn(1, 64, 56, 56)
+    block = BasicBlock(64, 64)
+    y = block(x)
+    print(y.shape)
 
+    x0 = torch.randn(1, 3, 224, 224)
     model = ResNet18(num_classes=2)
-
-    x1, x2, x3, x4 = model.forward_features(x)
-
-    #print("x1:", x1.shape)
-    # print("x2:", x2.shape)
-    # print("x3:", x3.shape)
-    # print("x4:", x4.shape)
+    x1, x2, x3, x4 = model.forward_features(x0)
+    print("x1:", x1.shape)
+    print("x2:", x2.shape)
+    print("x3:", x3.shape)
+    print("x4:", x4.shape)
