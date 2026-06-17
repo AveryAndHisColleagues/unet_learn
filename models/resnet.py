@@ -25,6 +25,73 @@ class SEBlock(nn.Module):
 
         return x * y
 
+class ChannelAttention(nn.Module):
+    def __init__(self, channels, reduction=16):
+        super(ChannelAttention, self).__init__()
+
+        self.avgpool = nn.AdaptiveAvgPool2d(1)
+        self.maxpool = nn.AdaptiveMaxPool2d(1)
+
+        self.mlp = nn.Sequential(
+            nn.Conv2d(channels, channels // reduction, kernel_size=1, bias=False),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(channels // reduction, channels, kernel_size=1, bias=False)
+        )
+
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        avg_out = self.mlp(self.avgpool(x))
+        max_out = self.mlp(self.maxpool(x))
+
+        weight = self.sigmoid(avg_out + max_out)
+
+        return x * weight
+    
+class SpatialAttention(nn.Module):
+    def __init__(self, kernel_size=7):
+        super(SpatialAttention, self).__init__()
+
+        padding = kernel_size // 2
+
+        self.conv = nn.Conv2d(
+            2,
+            1,
+            kernel_size=kernel_size,
+            padding=padding,
+            bias=False
+        )
+
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        avg_out = torch.mean(x, dim=1, keepdim=True)
+        max_out, _ = torch.max(x, dim=1, keepdim=True)
+
+        attn = torch.cat([avg_out, max_out], dim=1)
+        weight = self.sigmoid(self.conv(attn))
+
+        return x * weight
+    
+class CBAMBlock(nn.Module):
+    def __init__(self, channels, reduction=16, spatial_kernel=7):
+        super(CBAMBlock, self).__init__()
+
+        self.channel_attention = ChannelAttention(
+            channels,
+            reduction=reduction
+        )
+
+        self.spatial_attention = SpatialAttention(
+            kernel_size=spatial_kernel
+        )
+
+    def forward(self, x):
+        x = self.channel_attention(x)
+        x = self.spatial_attention(x)
+
+        return x
+
 class BasicBlock(nn.Module):
     expansion = 1
 
@@ -49,7 +116,8 @@ class BasicBlock(nn.Module):
         )
         self.bn2 = nn.BatchNorm2d(out_channels)
 
-        self.se = SEBlock(out_channels)
+        # self.se = SEBlock(out_channels)
+        self.attn = CBAMBlock(out_channels)
 
         self.relu = nn.ReLU(inplace=True)
 
@@ -70,7 +138,8 @@ class BasicBlock(nn.Module):
 
         out = self.conv2(out)
         out = self.bn2(out)
-        out = self.se(out)
+        # out = self.se(out)
+        out = self.attn(out)
         if self.downsample is not None:
             identity = self.downsample(x)
 
