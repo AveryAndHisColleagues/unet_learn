@@ -23,6 +23,18 @@ Best Val IoU:
 | ResUNet_BCEDice    |         0.3122 |           49 |            0.4094 |          0.2927 |
 | ResUNet_BCETversky |         0.5567 |           39 |            0.8002 |          0.5543 |
 
+# Final results
+| Exp | Model    | Loss        | Aug | Attention | Best IoU |
+| --- | -------- | ----------- | --- | --------- | -------: |
+| E1  | MiniUNet | BCE+Dice    | ✗   | ✗         |    0.511 |
+| E2  | ResUNet  | BCE+Dice    | ✗   | ✗         |    0.312 |
+| E3  | ResUNet  | BCE+Tversky | ✗   | ✗         |    0.557 |
+| E4  | MiniUNet | BCE+Tversky | ✗   | ✗         |    0.486 |
+| E5  | ResUNet  | BCE+Tversky | ✓   | ✗         |    0.590 |
+| E6  | ResUNet  | BCE+Tversky | ✓   | SE        |    0.594 |
+| E7  | ResUNet  | BCE+Tversky | ✓   | CBAM      |    0.594 |
+
+
 ## Takeaways
 
 - ResUNet + BCE+Tversky achieves the best validation IoU.
