@@ -59,6 +59,21 @@ class UpBlock(nn.Module):
         x = self.res_block(x)
         return x
 
+class ReverseAttention(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.conv1 = nn.Conv2d(in_channels, out_channels, 3, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(out_channels)
+        self.act = nn.GELU()   # ✅ 去掉 inplace
+
+        self.conv2 = nn.Conv2d(out_channels, out_channels, 3, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(out_channels)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        att = self.act(self.bn1(self.conv1(x)))   # ✅ 使用 self.act
+        att = self.sigmoid(self.bn2(self.conv2(att)))
+        return x * (1 - att)
 
 class ResUNet(nn.Module):
     def __init__(self, num_classes=1):
@@ -69,7 +84,7 @@ class ResUNet(nn.Module):
         self.up3 = UpBlock(512, 256, 256)
         self.up2 = UpBlock(256, 128, 128)
         self.up1 = UpBlock(128, 64, 64)
-
+        self.reverse_attention = ReverseAttention(64, 64)
         # self.final_up = nn.Upsample(
         #     scale_factor=4,
         #     mode="bilinear",
@@ -92,6 +107,8 @@ class ResUNet(nn.Module):
         d2 = self.up2(d3, x2)
         d1 = self.up1(d2, x1)
 
+        d1 = self.reverse_attention(d1)
+
         out = self.final_up(d1)
 
         if out.shape[-2:] != input_size:
@@ -105,6 +122,8 @@ class ResUNet(nn.Module):
         out = self.out_conv(out)
 
         return out
+    
+
 
 
 if __name__ == "__main__":
