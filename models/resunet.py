@@ -59,6 +59,14 @@ class UpBlock(nn.Module):
         x = self.reduce(x)
         x = self.res_block(x)
         return x
+    
+class SSMRefine(nn.Module):
+    def __init__(self, dim):
+        super().__init__()
+        self.ssm = SSMBottleneck(dim)
+
+    def forward(self, x):
+        return self.ssm(x)
 
 class ReverseAttention(nn.Module):
     def __init__(self, in_channels, out_channels):
@@ -80,6 +88,8 @@ class ResUNet(nn.Module):
     def __init__(self, num_classes=1):
         super().__init__()
         self.encoder = ResNet18(num_classes=2)
+        self.ssm_x1 = SSMBottleneck(64)
+        self.ssm_x2 = SSMBottleneck(128)
         self.ssm_x3 = SSMBottleneck(256)
         # self.ssm_bottleneck = SSMBottleneck(512)
 
@@ -87,6 +97,7 @@ class ResUNet(nn.Module):
         self.up2 = UpBlock(256, 128, 128)
         self.up1 = UpBlock(128, 64, 64)
         self.reverse_attention = ReverseAttention(64, 64)
+        self.ssm_refine = SSMRefine(64)
         # self.final_up = nn.Upsample(
         #     scale_factor=4,
         #     mode="bilinear",
@@ -104,13 +115,16 @@ class ResUNet(nn.Module):
         input_size = x.shape[-2:]
 
         x1, x2, x3, x4 = self.encoder.forward_features(x)
-        x3 = x3 + self.ssm_x3(x3)
+        # x1 = self.ssm_x1(x1)
+        x2 = self.ssm_x2(x2)
+        x3 = self.ssm_x3(x3)
         # x4 = self.ssm_bottleneck(x4)
         d3 = self.up3(x4, x3)
         d2 = self.up2(d3, x2)
         d1 = self.up1(d2, x1)
 
         d1 = self.reverse_attention(d1)
+        d1 = self.ssm_refine(d1)
 
         out = self.final_up(d1)
 

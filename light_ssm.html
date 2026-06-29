@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>LightSSM Architecture</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    display: flex;
+    height: 100vh;
+}
+
+/* 左右布局 */
+.left {
+    width: 55%;
+    background: #0f172a;
+    color: white;
+    padding: 20px;
+    overflow: auto;
+}
+
+.right {
+    width: 45%;
+    background: #f8fafc;
+    padding: 20px;
+    overflow: auto;
+    border-left: 2px solid #ddd;
+}
+
+/* 模块框 */
+.box {
+    border: 2px solid #38bdf8;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.box:hover {
+    background: #38bdf8;
+    color: black;
+}
+
+/* 箭头 */
+.arrow {
+    text-align: center;
+    font-size: 20px;
+}
+
+/* 代码块 */
+.code {
+    background: #111827;
+    color: #d1d5db;
+    padding: 10px;
+    border-radius: 8px;
+    font-family: monospace;
+    white-space: pre-wrap;
+}
+
+/* 标题 */
+h2 {
+    margin-top: 0;
+}
+</style>
+
+<script>
+function showInfo(type) {
+    let text = "";
+
+    if(type === "input") {
+        text = "输入特征图 x: [B, C, H, W]\n→ ResUNet decoder feature";
+    }
+
+    if(type === "local") {
+        text = `local feature extraction：
+
+Conv3x3 (depthwise)
+Conv1x1
+BN + GELU
+
+👉 提取局部纹理（血管边缘）`;
+    }
+
+    if(type === "gate") {
+        text = `channel gating：
+
+AdaptiveAvgPool2d(1)
+MLP: C → C/4 → C
+Sigmoid
+
+👉 给每个通道打分（重要性筛选）`;
+    }
+
+    if(type === "direction") {
+        text = `direction modeling：
+
+1×3 conv → horizontal
+3×1 conv → vertical
+
+👉 建模血管走向（结构连续性）`;
+    }
+
+    if(type === "fuse") {
+        text = `fusion：
+
+concat(local, h, w)
+1×1 conv
+
+👉 信息融合成统一表示`;
+    }
+
+    if(type === "res") {
+        text = `residual connection：
+
+output = fused + input
+
+👉 保留原始信息，避免信息丢失`;
+    }
+
+    document.getElementById("info").innerText = text;
+}
+</script>
+
+</head>
+
+<body>
+
+<!-- 左侧：结构图 -->
+<div class="left">
+
+<h2>🧠 LightSSM Architecture</h2>
+
+<div class="box" onclick="showInfo('input')">
+INPUT FEATURE
+</div>
+
+<div class="arrow">↓</div>
+
+<div class="box" onclick="showInfo('local')">
+LOCAL FEATURE (DWConv)
+</div>
+
+<div class="arrow">↓</div>
+
+<div class="box" onclick="showInfo('gate')">
+CHANNEL GATING (SE-like)
+</div>
+
+<div class="arrow">↓</div>
+
+<div class="box" onclick="showInfo('direction')">
+DIRECTIONAL SCAN (H + W)
+</div>
+
+<div class="arrow">↓</div>
+
+<div class="box" onclick="showInfo('fuse')">
+FUSION (Concat + 1×1 Conv)
+</div>
+
+<div class="arrow">↓</div>
+
+<div class="box" onclick="showInfo('res')">
+RESIDUAL OUTPUT
+</div>
+
+</div>
+
+<!-- 右侧：解释 -->
+<div class="right">
+
+<h2>📜 Module Explanation</h2>
+
+<p>点击左侧模块查看说明</p>
+
+<pre id="info" class="code">
+LightSSM Module Ready.
+
+Click any block on the left to inspect its function.
+</pre>
+
+<hr>
+
+<h3>💻 Core Code Reference</h3>
+
+<pre class="code">
+class LightSSM(nn.Module):
+    def __init__(self, dim):
+
+        self.local = Conv3x3(DW) + Conv1x1 + BN + GELU
+
+        self.mixer = SE-like gating:
+            GAP → MLP → Sigmoid
+
+        self.h_scan = Conv(1×3)
+        self.w_scan = Conv(3×1)
+
+        self.fuse = Conv1×1
+
+    def forward(self, x):
+
+        local = self.local(x)
+
+        gate = self.mixer(local)
+        gated = local * gate
+
+        h = self.h_scan(gated)
+        w = self.w_scan(gated)
+
+        out = concat(local, h, w)
+        out = self.fuse(out)
+
+        return out + x
+</pre>
+
+</div>
+
+</body>
+</html>
