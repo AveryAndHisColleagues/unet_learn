@@ -74,8 +74,10 @@ def main():
     Path("logs").mkdir(exist_ok=True)
     Path("checkpoints").mkdir(exist_ok=True)
 
-    log_path = Path("logs/e9_ssm_log.csv")
-    best_model_path = Path("checkpoints/best_ssm.pth")
+    # log_path = Path("logs/e9_ssm_log.csv")
+    # best_model_path = Path("checkpoints/best_ssm.pth")
+    log_path = Path("logs/e10_ssm_x3_log.csv")
+    best_model_path = Path("checkpoints/best_e10_ssm_x3.pth")
 
     # ===== dataset =====
     dataset = DriveDataset(
