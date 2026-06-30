@@ -67,3 +67,5 @@ torch_extensions/
 # =====================
 *.csv~
 *.tmp
+*.html
+models/learn.ipynb
